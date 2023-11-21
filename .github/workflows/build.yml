@@ -28,4 +28,6 @@ jobs:
           retention-days: 5
           if-no-files-found: warn
           path: |
-            build/app/outputs/flutter-apk/
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
