@@ -26,5 +26,6 @@ jobs:
         with:
           name: release-builds
           retention-days: 5
+          if-no-files-found: warn
           path: |
             build/app/outputs/flutter-apk/
