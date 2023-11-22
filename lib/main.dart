@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -29,8 +31,24 @@ final bluetoothDevicesProvider = StreamProvider<List<BluetoothDevice>>((ref) {
   return FlutterBluePlus.scanResults.map((event) => event.map((e) => e.device).toList());
 });
 
+/// Fetch the current bluetooth device connected
+/// Could be null for the first time
+/// Would be used to listen to the services and characteristics
 final currentBluetoothProvider = StateProvider<BluetoothDevice?>((ref) {
   return;
+});
+
+/// Fetch the services of the bluetoothDevice passed
+final bluetoothServicesProvider = FutureProvider.family<List<BluetoothService>, BluetoothDevice>((ref, device) async {
+  return device.discoverServices();
+});
+
+final characteristsicsProvider = StreamProvider.family<String, BluetoothCharacteristic>((ref, characteristic) {
+  return characteristic.onValueReceived.map((event) {
+    final data = utf8.decode(event);
+    log(data);
+    return data;
+  });
 });
 
 class MainApp extends ConsumerWidget {
@@ -167,20 +185,54 @@ class _HomeAppState extends ConsumerState<HomeApp> with TickerProviderStateMixin
         ),
         body: SnappingSheet(
           /// Show Sheet only when bluetooth device is connected
-          sheetBelow:
-              // ref.watch(currentBluetoothProvider) != null ?
-              SnappingSheetContent(
+          sheetBelow: ref.watch(currentBluetoothProvider) != null
+              ? SnappingSheetContent(
                   childScrollController: scrollController,
                   draggable: true,
-                  child: ListView(
-                    controller: scrollController,
-                    reverse: true,
-                    children: const [],
-                  ))
-          // : null
-          ,
-          // grabbing: ref.watch(currentBluetoothProvider) != null ? const GrabbingWidget() : const SizedBox.shrink(),
-          grabbing: const GrabbingWidget(),
+                  child: Consumer(builder: (context, ref, _) {
+                    final futureservices = ref.watch(bluetoothServicesProvider(ref.watch(currentBluetoothProvider)!));
+                    return futureservices.when(
+                      data: (services) {
+                        return ListView(
+                          controller: scrollController,
+                          reverse: true,
+                          children: services.map((service) {
+                            return Column(
+                              children: [
+                                Text(service.uuid.str),
+                                ...service.characteristics
+                                    .map((characteristic) => CharacteristicTileWidget(
+                                          characteristic: characteristic,
+                                          onNotify: (data) {
+                                            final stringData = utf8.decode(data);
+
+                                            /// the string data is : lat:lat_numberlon:lon_number
+                                            /// so parse the data and update the markers
+                                            final LatLng latlng = LatLng(
+                                                double.parse(stringData.split('lat:')[1].split('lon:')[0]),
+                                                double.parse(stringData.split('lon:')[1]));
+
+                                            markers.value = [...markers.value, latlng];
+                                            log(stringData);
+                                          },
+                                        ))
+                                    .toList()
+                              ],
+                            );
+                          }).toList(),
+                        );
+                      },
+                      loading: () => const Center(
+                        child: CircularProgressIndicator.adaptive(),
+                      ),
+                      error: (error, stackTrace) {
+                        return ErrorWidget(error);
+                      },
+                    );
+                  }))
+              : null,
+          grabbing: ref.watch(currentBluetoothProvider) != null ? const GrabbingWidget() : const SizedBox.shrink(),
+          // grabbing: const GrabbingWidget(),
           grabbingHeight: 75,
           snappingPositions: const [
             SnappingPosition.factor(
@@ -319,6 +371,51 @@ class GrabbingWidget extends StatelessWidget {
           )
         ],
       ),
+    );
+  }
+}
+
+class CharacteristicTileWidget extends ConsumerStatefulWidget {
+  final BluetoothCharacteristic characteristic;
+  final void Function(List<int>)? onNotify;
+  const CharacteristicTileWidget({super.key, required this.characteristic, required this.onNotify});
+
+  @override
+  ConsumerState<ConsumerStatefulWidget> createState() => _CharacteristicTileWidgetState();
+}
+
+class _CharacteristicTileWidgetState extends ConsumerState<CharacteristicTileWidget> {
+  bool notifying = false;
+
+  @override
+  void initState() {
+    notifying = widget.characteristic.isNotifying;
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(widget.characteristic.uuid.str),
+      trailing: notifying
+          ? TextButton(
+              onPressed: () {
+                widget.characteristic.onValueReceived.listen(widget.onNotify);
+              },
+              child: const Text('Subscribe'),
+            )
+          : null,
+      subtitle: TextButton(
+          onPressed: () async {
+            if (notifying) {
+              //TODO: Show logs
+            } else {
+              await widget.characteristic.setNotifyValue(true, timeout: 45);
+              notifying = true;
+              setState(() {});
+            }
+          },
+          child: Text(!widget.characteristic.isNotifying ? 'Subscribe' : 'Logs')),
     );
   }
 }
