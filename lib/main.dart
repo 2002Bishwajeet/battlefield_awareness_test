@@ -140,32 +140,34 @@ class _HomeAppState extends ConsumerState<HomeApp> {
                 }),
             ref.watch(bluetoothDevicesProvider).when(
                 data: (data) {
-                  return Column(
-                    children: data
-                        .map((e) => ListTile(
-                              title: Text(e.platformName),
-                              subtitle: Text(e.remoteId.str),
-                              onTap: () {
-                                e.connect(autoConnect: true).onError((error, stackTrace) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(error.toString()),
-                                      showCloseIcon: true,
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                }).then((value) => ScaffoldMessenger.of(context).showSnackBar(
+                  return Expanded(
+                    child: ListView(
+                      children: data
+                          .map((e) => ListTile(
+                                title: Text(e.platformName),
+                                subtitle: Text(e.remoteId.str),
+                                onTap: () {
+                                  e.connect(autoConnect: true).onError((error, stackTrace) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Connected to ${e.platformName}'),
+                                        content: Text(error.toString()),
                                         showCloseIcon: true,
                                         behavior: SnackBarBehavior.floating,
                                       ),
-                                    ));
+                                    );
+                                  }).then((value) => ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Connected to ${e.platformName}'),
+                                          showCloseIcon: true,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      ));
 
-                                Navigator.of(context).pop();
-                              },
-                            ))
-                        .toList(),
+                                  Navigator.of(context).pop();
+                                },
+                              ))
+                          .toList(),
+                    ),
                   );
                 },
                 error: (error, stackTrace) {
