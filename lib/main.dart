@@ -208,11 +208,21 @@ class _HomeAppState extends ConsumerState<HomeApp> with TickerProviderStateMixin
 
                                             /// the string data is : lat:lat_number,lon:lon_number
                                             /// so parse the data and update the markers
-                                            final LatLng latlng = LatLng(
-                                                double.parse(stringData.split(',')[0].split(':')[1]),
-                                                double.parse(stringData.split(',')[1].split(':')[1]));
+                                            try {
+                                              final LatLng latlng = LatLng(
+                                                  double.parse(stringData.split(',')[0].split(':')[1]),
+                                                  double.parse(stringData.split(',')[1].split(':')[1]));
 
-                                            markers.value = [...markers.value, latlng];
+                                              markers.value = [...markers.value, latlng];
+                                            } on Exception catch (e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(e.toString()),
+                                                  showCloseIcon: true,
+                                                  behavior: SnackBarBehavior.floating,
+                                                ),
+                                              );
+                                            }
                                             log(stringData);
                                           },
                                         ))
