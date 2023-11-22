@@ -206,11 +206,11 @@ class _HomeAppState extends ConsumerState<HomeApp> with TickerProviderStateMixin
                                           onNotify: (data) {
                                             final stringData = utf8.decode(data);
 
-                                            /// the string data is : lat:lat_numberlon:lon_number
+                                            /// the string data is : lat:lat_number,lon:lon_number
                                             /// so parse the data and update the markers
                                             final LatLng latlng = LatLng(
-                                                double.parse(stringData.split('lat:')[1].split('lon:')[0]),
-                                                double.parse(stringData.split('lon:')[1]));
+                                                double.parse(stringData.split(',')[0].split(':')[1]),
+                                                double.parse(stringData.split(',')[1].split(':')[1]));
 
                                             markers.value = [...markers.value, latlng];
                                             log(stringData);
