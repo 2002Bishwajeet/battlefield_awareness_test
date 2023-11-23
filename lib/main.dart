@@ -168,6 +168,7 @@ class _HomeAppState extends ConsumerState<HomeApp> with TickerProviderStateMixin
                   }),
               ref.watch(bluetoothDevicesProvider).when(
                   data: (data) {
+                    data = data.where((element) => element.remoteId.str == "00:19:10:08:D2:16").toList();
                     return Expanded(
                       child: ListView(
                         children: data.map((e) => TileWidget(device: e)).toList(),
@@ -309,7 +310,7 @@ class _TileWidgetState extends ConsumerState<TileWidget> {
   Widget build(BuildContext context) {
     final currentSelectedDevice = ref.watch(currentBluetoothProvider);
     return ListTile(
-      title: Text(widget.device.platformName),
+      title: Text("${widget.device.advName} | ${widget.device.platformName}"),
       subtitle: Text(widget.device.remoteId.str),
       trailing: currentSelectedDevice != null && currentSelectedDevice == widget.device
           ? const Text('Connected')
